@@ -1,0 +1,271 @@
+import React, { useState } from 'react';
+import { User, Calendar, FileText, ArrowLeft, Plus, Activity, Eye, Pencil, Printer } from 'lucide-react';
+import type { Patient, Prescription } from '../../types';
+import { PrescriptionView } from '../prescription/PrescriptionView';
+import { PrescriptionForm } from '../prescription/PrescriptionForm';
+import { generatePrescriptionPDF } from '../../utils/pdfGenerator';
+
+interface PatientDetailsProps {
+  patient: Patient;
+  prescriptions: Prescription[];
+  onBack: () => void;
+  onNewPrescription: (patient: Patient) => void;
+  onUpdatePrescription?: (prescription: Prescription) => void;
+}
+
+export const PatientDetails: React.FC<PatientDetailsProps> = ({
+  patient,
+  prescriptions,
+  onBack,
+  onNewPrescription,
+  onUpdatePrescription,
+}) => {
+  const [viewingPrescription, setViewingPrescription] = useState<Prescription | null>(null);
+  const [editingPrescription, setEditingPrescription] = useState<Prescription | null>(null);
+
+  const handlePrint = async (prescription: Prescription) => {
+    try {
+      await generatePrescriptionPDF(prescription);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Please try again.');
+    }
+  };
+
+  const handleEdit = (prescription: Prescription) => {
+    setEditingPrescription(prescription);
+  };
+
+  const handleUpdatePrescription = (updatedPrescription: Prescription) => {
+    if (onUpdatePrescription) {
+      onUpdatePrescription(updatedPrescription);
+    }
+    setEditingPrescription(null);
+  };
+
+  if (editingPrescription) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setEditingPrescription(null)}
+            className="inline-flex items-center px-3 py-1 text-sm text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back to History
+          </button>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6">
+          <PrescriptionForm
+            patientId={patient.id}
+            initialData={editingPrescription}
+            onSubmit={handleUpdatePrescription}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center px-3 py-1 text-sm text-gray-600 hover:text-gray-900"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back to Patients
+        </button>
+        <button
+          onClick={() => onNewPrescription(patient)}
+          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          New Prescription
+        </button>
+      </div>
+
+      {/* Patient Info Card */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="px-6 py-5">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <User className="h-12 w-12 text-gray-400" />
+            </div>
+            <div className="ml-4">
+              <h2 className="text-xl font-medium text-gray-900">{patient.name}</h2>
+              <div className="mt-1 text-sm text-gray-500 space-y-1">
+                <p>Patient ID: {patient.patientId}</p>
+                <p>{patient.age} years • {patient.gender}</p>
+                <p>Phone: {patient.phoneNumber}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Prescription History */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="px-6 py-5">
+          <h3 className="text-lg font-medium text-gray-900">Prescription History</h3>
+          {prescriptions.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No prescriptions</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                No prescriptions have been created for this patient yet.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-4 space-y-6">
+              {prescriptions.map((prescription) => (
+                <div
+                  key={prescription.prescriptionId}
+                  className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50"
+                >
+                  <div className="space-y-4">
+                    {/* Header with Date, IDs and Actions */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <FileText className="h-5 w-5 text-gray-400" />
+                        <span className="text-sm font-medium text-gray-900">
+                          Prescription ID: {prescription.prescriptionId}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          <Calendar className="h-4 w-4 inline mr-1" />
+                          {new Date(prescription.date).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => setViewingPrescription(prescription)}
+                          className="inline-flex items-center px-2 py-1 text-sm text-indigo-600 hover:text-indigo-900"
+                          title="View Prescription"
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </button>
+                        <button
+                          onClick={() => handleEdit(prescription)}
+                          className="inline-flex items-center px-2 py-1 text-sm text-indigo-600 hover:text-indigo-900"
+                          title="Edit Prescription"
+                        >
+                          <Pencil className="h-4 w-4 mr-1" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handlePrint(prescription)}
+                          className="inline-flex items-center px-2 py-1 text-sm text-indigo-600 hover:text-indigo-900"
+                          title="Print Prescription"
+                        >
+                          <Printer className="h-4 w-4 mr-1" />
+                          Print
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Rest of the prescription content remains the same */}
+                    {/* Vital Signs */}
+                    {prescription.vitalSigns && (
+                      <div className="bg-gray-50 rounded-md p-3">
+                        <div className="flex items-center mb-2">
+                          <Activity className="h-4 w-4 text-gray-500 mr-1" />
+                          <h4 className="text-sm font-medium text-gray-700">Vital Signs</h4>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                          <div>
+                            <span className="font-medium">Blood Pressure:</span>{' '}
+                            {prescription.vitalSigns.bloodPressure}
+                          </div>
+                          <div>
+                            <span className="font-medium">Pulse Rate:</span>{' '}
+                            {prescription.vitalSigns.pulseRate} bpm
+                          </div>
+                          <div>
+                            <span className="font-medium">Temperature:</span>{' '}
+                            {prescription.vitalSigns.temperature}°F
+                          </div>
+                          <div>
+                            <span className="font-medium">Weight:</span>{' '}
+                            {prescription.vitalSigns.weight} kg
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Symptoms */}
+                    {prescription.symptoms && (
+                      <div className="text-sm text-gray-600">
+                        <div className="font-medium mb-1">Symptoms:</div>
+                        <p>{prescription.symptoms}</p>
+                      </div>
+                    )}
+
+                    {/* Diagnoses */}
+                    <div className="text-sm text-gray-600">
+                      <div className="font-medium mb-1">Diagnoses:</div>
+                      <div className="flex flex-wrap gap-2">
+                        {prescription.diagnoses?.map((diagnosis, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
+                          >
+                            {diagnosis}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Medications */}
+                    {prescription.medications && prescription.medications.length > 0 && (
+                      <div className="text-sm text-gray-600">
+                        <div className="font-medium mb-1">Medications:</div>
+                        <ul className="mt-1 list-disc pl-5 space-y-1">
+                          {prescription.medications.map((med, index) => (
+                            <li key={index}>
+                              {med.name} - {med.dosage} ({med.interval} for {med.duration})
+                              {med.instructions && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Instructions: {med.instructions}
+                                </div>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Lab Tests */}
+                    {prescription.labTests && prescription.labTests.length > 0 && (
+                      <div className="text-sm text-gray-600">
+                        <div className="font-medium mb-1">Lab Tests:</div>
+                        <ul className="mt-1 list-disc pl-5">
+                          {prescription.labTests.map((test, index) => (
+                            <li key={index}>{test}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* View Prescription Modal */}
+      {viewingPrescription && (
+        <PrescriptionView
+          prescription={viewingPrescription}
+          onClose={() => setViewingPrescription(null)}
+          onEdit={() => {
+            setViewingPrescription(null);
+            handleEdit(viewingPrescription);
+          }}
+        />
+      )}
+    </div>
+  );
+};
